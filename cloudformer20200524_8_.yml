@@ -258,9 +258,6 @@ Resources:
   assoc1:
     Type: 'AWS::EC2::EIPAssociation'
     Properties:
-      AllocationId: !GetAtt 
-        - eip542383070
-        - AllocationId
       InstanceId: !Ref instancei0644244ae5bd38820
       EIP: 54.249.250.237
   ingress5:
