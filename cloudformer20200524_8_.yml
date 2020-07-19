@@ -1,0 +1,412 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  
+# ------------------------------------------------------------#
+# 指定された IPv4 CIDR ブロックで VPC を指定
+# ------------------------------------------------------------#
+
+  vpc07aeb75d08fe68689:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      InstanceTenancy: default
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: AWS_Book_cloudformation
+  
+# ------------------------------------------------------------#
+# VPC のサブネット(10.10.1.0/24)を指定
+# ------------------------------------------------------------#
+
+  subnet086d10e4d710423aa:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.10.1.0/24
+      AvailabilityZone: ap-northeast-1d
+      VpcId: !Ref vpc07aeb75d08fe68689
+      Tags:
+        - Key: Name
+          Value: AWS_Book_Subnet_cloudformation2
+  
+# ------------------------------------------------------------#
+# VPC のサブネット(10.10.20.0/24)を指定
+# ------------------------------------------------------------#
+
+  subnet034e1c4d02c60eabc:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.10.20.0/24
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !Ref vpc07aeb75d08fe68689
+      Tags:
+        - Key: Name
+          Value: AWS_BOOK_Subnet_DB_cloudformation2
+  
+# ------------------------------------------------------------#
+# VPC のサブネット(10.10.0.0/24)を指定
+# ------------------------------------------------------------#
+
+  subnet06a59b199913ebd07:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.10.0.0/24
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref vpc07aeb75d08fe68689
+      Tags:
+        - Key: Name
+          Value: AWS_Book_Subnet_cloudformation
+    
+# ------------------------------------------------------------#
+# VPC のサブネット(10.10.10.0/24)を指定
+# ------------------------------------------------------------#
+
+  subnet05f168e0d10af187a:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.10.10.0/24
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref vpc07aeb75d08fe68689
+      Tags:
+        - Key: Name
+          Value: AWS_BOOK_Subnet_DB_cloudformation
+    
+# ------------------------------------------------------------#
+# VPCに使用するインターネットゲートウェイを割り当て
+# ------------------------------------------------------------#
+
+  igw05c159c36281dee4e:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: AWS_Book_Gateway_cloudformation
+    
+# ------------------------------------------------------------#
+# VPC 用の DHCP オプションセットを指定
+# ------------------------------------------------------------#
+
+  doptefa59288:
+    Type: 'AWS::EC2::DHCPOptions'
+    Properties:
+      DomainName: ap-northeast-1.compute.internal
+      DomainNameServers:
+        - AmazonProvidedDNS
+    
+# ------------------------------------------------------------#
+# VPC のネットワーク ACL を指定
+# ------------------------------------------------------------#
+
+  acl07b6cd628bc2cbe1a:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref vpc07aeb75d08fe68689
+  rtb0dda268958f7fbd62:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref vpc07aeb75d08fe68689
+      Tags:
+        - Key: Name
+          Value: AWS_Book_RouteTable_cloudformation
+    
+# ------------------------------------------------------------#
+# EC2 インスタンスを指定
+# ------------------------------------------------------------#
+
+  instancei0644244ae5bd38820:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      DisableApiTermination: 'false'
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-0318ecd6d05daa212
+      InstanceType: t2.micro
+      KeyName: AWS_Book_Key
+      Monitoring: 'false'
+      Tags:
+        - Key: Name
+          Value: AWS_Book_Instance2_cloudformation
+      NetworkInterfaces:
+        - DeleteOnTermination: 'true'
+          Description: Primary network interface
+          DeviceIndex: 0
+          SubnetId: !Ref subnet06a59b199913ebd07
+          PrivateIpAddresses:
+            - PrivateIpAddress: 10.10.0.90
+              Primary: 'true'
+          GroupSet:
+            - !Ref sgAWSBookSecurityGroup
+          AssociatePublicIpAddress: 'true'
+    
+# ------------------------------------------------------------#
+# Amazon RDS DB インスタンスを作成
+# ------------------------------------------------------------#
+
+  rdsdatabase1:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      AllocatedStorage: '20'
+      AllowMajorVersionUpgrade: 'false'
+      AutoMinorVersionUpgrade: 'true'
+      DBInstanceIdentifier: cloudformationdb
+      DBInstanceClass: db.t2.micro
+      Port: '3306'
+      StorageType: gp2
+      BackupRetentionPeriod: '7'
+      MasterUsername: root
+      MasterUserPassword: saitou326
+      PreferredBackupWindow: '18:08-18:38'
+      PreferredMaintenanceWindow: 'sat:15:10-sat:15:40'
+      DBName: MyDatabase
+      Engine: mysql
+      EngineVersion: 5.7.22
+      LicenseModel: general-public-license
+      DBSubnetGroupName: !Ref dbsubnetdbsubnet
+      VPCSecurityGroups:
+        - !Ref sgAWSBookSecurityGroupRDS
+  dbsubnetdbsubnet:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: DB subnet
+      SubnetIds:
+        - !Ref subnet06a59b199913ebd07
+        - !Ref subnet034e1c4d02c60eabc
+  sgAWSBookSecurityGroupRDS:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: AWS_Book_SecurityGroup_RDS
+      VpcId: !Ref vpc07aeb75d08fe68689
+  sgAWSBookSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: AWS_Book_SecurityGroup
+      VpcId: !Ref vpc07aeb75d08fe68689
+  acl7:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: 'true'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '100'
+      NetworkAclId: !Ref acl07b6cd628bc2cbe1a
+  acl8:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '100'
+      NetworkAclId: !Ref acl07b6cd628bc2cbe1a
+  subnetacl13:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref acl07b6cd628bc2cbe1a
+      SubnetId: !Ref subnet086d10e4d710423aa
+  subnetacl14:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref acl07b6cd628bc2cbe1a
+      SubnetId: !Ref subnet06a59b199913ebd07
+  subnetacl15:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref acl07b6cd628bc2cbe1a
+      SubnetId: !Ref subnet034e1c4d02c60eabc
+  subnetacl16:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref acl07b6cd628bc2cbe1a
+      SubnetId: !Ref subnet05f168e0d10af187a
+  gw4:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref vpc07aeb75d08fe68689
+      InternetGatewayId: !Ref igw05c159c36281dee4e
+  subnetroute16:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rtb0dda268958f7fbd62
+      SubnetId: !Ref subnet034e1c4d02c60eabc
+  subnetroute17:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rtb0dda268958f7fbd62
+      SubnetId: !Ref subnet06a59b199913ebd07
+  subnetroute18:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rtb0dda268958f7fbd62
+      SubnetId: !Ref subnet05f168e0d10af187a
+  subnetroute19:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rtb0dda268958f7fbd62
+      SubnetId: !Ref subnet086d10e4d710423aa
+  route4:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref rtb0dda268958f7fbd62
+      GatewayId: !Ref igw05c159c36281dee4e
+    DependsOn: gw4
+  dchpassoc4:
+    Type: 'AWS::EC2::VPCDHCPOptionsAssociation'
+    Properties:
+      VpcId: !Ref vpc07aeb75d08fe68689
+      DhcpOptionsId: !Ref doptefa59288
+  assoc1:
+    Type: 'AWS::EC2::EIPAssociation'
+    Properties:
+      AllocationId: !GetAtt 
+        - eip542383070
+        - AllocationId
+      InstanceId: !Ref instancei0644244ae5bd38820
+      EIP: 54.249.250.237
+  ingress5:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref sgAWSBookSecurityGroupRDS
+      IpProtocol: tcp
+      FromPort: '3306'
+      ToPort: '3306'
+      SourceSecurityGroupId: !Ref sgAWSBookSecurityGroup
+      SourceSecurityGroupOwnerId: '241974294878'
+  ingress6:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref sgAWSBookSecurityGroup
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      CidrIp: 0.0.0.0/0
+  ingress7:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref sgAWSBookSecurityGroup
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp: 0.0.0.0/0
+  ingress8:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref sgAWSBookSecurityGroup
+      IpProtocol: tcp
+      FromPort: '3000'
+      ToPort: '3000'
+      CidrIp: 0.0.0.0/0
+  egress3:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref sgAWSBookSecurityGroupRDS
+      IpProtocol: '-1'
+      CidrIp: 0.0.0.0/0
+  egress4:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref sgAWSBookSecurityGroup
+      IpProtocol: '-1'
+      CidrIp: 0.0.0.0/0
+
+
+# ------------------------------------------------------------#
+#  Target Group
+# ------------------------------------------------------------#
+      
+  TargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      VpcId: !Ref vpc07aeb75d08fe68689
+      Name: cloudformation-tg
+      Protocol: HTTP
+      Port: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 10
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: Name
+          Value: cloudformation-tg
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 300
+        - Key: stickiness.enabled
+          Value: false
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: 86400
+      Targets:
+        - Id: !Ref instancei0644244ae5bd38820
+          Port: 80
+        
+# ------------------------------------------------------------#
+#  Internet ALB
+# ------------------------------------------------------------#
+
+  InternetALB:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: cloudformation-alb
+      Tags:
+        - Key: Name
+          Value: cloudformation-alb
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+      SecurityGroups:
+        - !Ref sgAWSBookSecurityGroup
+      Subnets:
+        - !Ref subnet06a59b199913ebd07
+        - !Ref subnet086d10e4d710423aa
+  ALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternetALB
+      Port: 80
+      Protocol: HTTP
+      
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#
+      
+Outputs:
+  ALBDNSName:
+    Value: !GetAtt 
+      - InternetALB
+      - DNSName
+    Export:
+      Name: cloudformation20200601test-alb-dnsname
+  EC2InstanceID:
+    Value: !Ref instancei0644244ae5bd38820
+    Export:
+      Name: cloudformation20200601test-id
+  EC2InstancePrivateIp:
+    Value: !GetAtt 
+      - instancei0644244ae5bd38820
+      - PrivateIp
+    Export:
+      Name: cloudformation20200601test-private-ip
+  EC2InstanceEIP:
+    Value: !GetAtt 
+      - instancei0644244ae5bd38820
+      - PublicIp
+    Export:
+      Name: cloudformation20200601test-eip
+  EC2InstanceRoleName:
+    Value: AWS_Book_Instance2_cloudformation-role
+    Export:
+      Name: cloudformation20200601test-role-name
+Description: test0524
